@@ -1,0 +1,69 @@
+8 3 9
+8 4 9
+8 5 9
+
+State 9:
+9 0 10
+9 1 10
+9 2 10
+9 3 10
+9 4 10
+9 5 10
+
+State 11:
+11 0 12
+11 1 12
+11 2 12
+11 3 12
+11 4 12
+11 5 12
+
+State 12:
+12 0 13
+12 1 13
+12 2 13
+12 3 13
+12 4 13
+12 5 13
+
+State 13:
+13 0 14
+13 1 14
+13 2 14
+13 3 14
+13 4 14
+13 5 14
+
+States 10 and 14 are final. No transitions from them.
+
+Now count transitions:
+State 0: 6
+State 1: 6
+State 2: 6
+State 3: 5
+State 4: 6
+State 5: 6
+State 6: 6
+State 7: 6
+State 8: 6
+State 9: 6
+State 11: 6
+State 12: 6
+State 13: 6
+Total = 6*12 + 5 = 72+5=77? Let's count: states with 6 transitions: 0,1,2,4,5,6,7,8,9,11,12,13 = 12 states *6 = 72. State 3 has 5. Total 77 transitions. But wait, state 10 and 14 have 0. So total lines = 77.
+
+We need output n=15, m=12, start=0, final=10 14.
+
+Check if any other final states? Only exactly 4 digits after the 3 letters. So states 10 and 14.
+
+Now format: n, m, start states, final states, then each transition line: state symbol next_state. Symbols are single characters. So we can write e.g. "0 S 1".
+
+We must not include markdown. Just plain text.
+
+Let's write all transitions in order.
+
+We need to ensure no missing states. Our n=15, states 0-14.
+
+Let's list all transitions sequentially.
+
+I'll write them.

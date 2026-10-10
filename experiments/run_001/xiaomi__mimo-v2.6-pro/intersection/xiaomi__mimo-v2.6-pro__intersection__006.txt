@@ -1,0 +1,59 @@
+- (10): zeros=1 ✓.
+- (11): zeros=0. Could zeros be 1? Total zeros =1 but last two symbols "11" — possible if the zero was earlier. Wait level 2 means total length is 2, so all symbols are the suffix. So zeros=0 for (11). But then after reading 2 symbols, the whole string is the suffix. So level-2 states: (01,z=1), (10,z=1), (11,z=0). Right, 3 states.
+
+Level 1: (0,z=1), (1,z=0). 2 states.
+Level 0: (ε, z=0). 1 state.
+Dead state (≥2 zeros): 1 state. Also dead states for strings of length ≥3 where third-from-end ≠ 1? No — those are non-accepting states, not dead; the automaton must still continue.
+
+Wait, I need to be careful: at level ≥3, the state must capture enough to determine acceptance at the end. The accepting condition is: length ≥3 and third-from-end = 1 and exactly one 0. In state (a,b,c) with a = third-from-end, acceptance iff a=1 and zeros=1. So states (1,*,*) with z=1 accept. From the 5 states: (101,z=1): a=1 ✓ accept. (110,z=1): a=1 ✓ accept. (111,z=1): a=1 ✓ accept. (011,z=1): a=0 ✗. (111,z=0): a=1 but zeros=0 ✗.
+
+But wait, we need to double check: the state (a,b,c) represents the last three symbols; but when the string has length ≥3, the state is well-defined. Good. And transitions: from level-2 state (s1,s2) on symbol t → level-3 state (s1,s2,t). From level-3 state (a,b,c) on t → (b,c,t), with zero count updated: if t=0, zeros+1 (if becomes 2 → dead).
+
+But hold on: level-3 states only include suffixes with ≤1 zero given the count; transitions must be consistent. Let's verify: from (111,z=0) on t=0 → (110, z=1) ✓ included. On t=1 → (111,z=0) ✓. From (111,z=1) on t=0 → (110, z=2) → dead. On t=1 → (111,z=1) ✓. From (101,z=1) on 0 → (010, z=2) → dead. On 1 → (011,z=1) ✓. From (011,z=1) on 0 → (110, z=2) → dead. On 1 → (111, z=1) ✓. From (110,z=1) on 0 → (100,z=2) → dead. On 1 → (101,z=1) ✓. 
+
+Now level-2 → level-3: from (01,z=1) on 0 → (010, z=2) → dead. On 1 → (011, z=1) ✓. From (10,z=1) on 0 → (100, z=2) → dead. On 1 → (101, z=1) ✓. From (11,z=0) on 0 → (110, z=1) ✓. On 1 → (111,z=0) ✓.
+
+Level-1 → level-2: from (0,z=1) on 0 → (00, z=2) → dead. On 1 → (01, z=1) ✓. From (1,z=0) on 0 → (10, z=1) ✓. On 1 → (11, z=0) ✓.
+
+Level-0 → level-1: on 0 → (0,z=1) ✓; on 1 → (1,z=0) ✓.
+
+Dead state: on 0,1 → dead.
+
+Total states: 1 + 2 + 3 + 5 + 1 = 12.
+
+Let's number:
+0: ε (z=0), level 0
+1: "0" (z=1), level 1
+2: "1" (z=0), level 1
+3: "01" (z=1), level 2
+4: "10" (z=1), level 2
+5: "11" (z=0), level 2
+6: "011" (z=1), level 3, a=0 → non-accepting
+7: "101" (z=1), level 3, a=1 → accepting
+8: "110" (z=1), level 3, a=1 → accepting
+9: "111" (z=0), level 3, a=1 but z=0 → non-accepting
+10: "111" (z=1), level 3, a=1 → accepting
+11: dead (≥2 zeros)
+
+Initial: 0. Accepting: 7, 8, 10.
+
+Transitions:
+State 0: 0→1, 1→2
+State 1 ("0",z=1): 0→11 (dead), 1→3
+State 2 ("1",z=0): 0→4, 1→5
+State 3 ("01",z=1): 0→11, 1→6
+State 4 ("10",z=1): 0→11, 1→7
+State 5 ("11",z=0): 0→8, 1→9
+State 6 ("011",z=1): 0→11, 1→10
+State 7 ("101",z=1): 0→11, 1→6
+State 8 ("110",z=1): 0→11, 1→7
+State 9 ("111",z=0): 0→8, 1→9
+State 10 ("111",z=1): 0→11, 1→10
+State 11 (dead): 0→11, 1→11
+
+Check some strings:
+- "101": length 3, third from end = '1' ✓, exactly one 0 ✓ → accept. Path: 0 -1→2 -0→4 -1→7. State 7 accepting ✓.
+- "110": third from end = '1' ✓, one zero ✓ → accept. Path: 0-1→2-1→5-0→8 accepting ✓.
+- "111": no zeros → reject. Path: 0-1→2-1→5-1→9, not accepting ✓.
+- "011": third from end = '0' → reject. Path: 0-0→1-1→3-1→6, non-accepting ✓.
+- "0
