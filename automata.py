@@ -45,6 +45,7 @@ class DFA:
     start_state = None
     finish_states = []
     alphabet = []
+    states = []
     total_states = 0
 
     def __init__(self, start_state, alphabet, finish_states) :

@@ -1,7 +1,7 @@
 from misc import *
 from openrouter_requester import *
 from fileIO import *
-from automata import *
+from ground_truth import *
 
 
 RUN_NAME = "run_001"
@@ -23,6 +23,15 @@ tasks = {
 
     "abc-bca-cab": "слово состоит только из конкатенированных циклических сдвигов abc {a, b, c}",
 }
+
+tasks_alphabets = {
+    "basic": ["0", "1"],
+    "4th-symbol": ["0", "1"],
+    "employer": list("AMCSPB012345"),
+    "intersection": ["0", "1"],
+    "abc-bca-cab": ["a", "b", "c"],
+}
+
 tasks_tests = {
     "basic": {
         "": "deny",
@@ -145,6 +154,12 @@ def check_results(model_folder_name : str) :
     root = Path("experiments") / RUN_NAME / model_folder_name
 
     for task in tasks.keys() :
+
+        ground_truth = minimize_dfa(ground_truth_builders[task]())
+
+        equivalent_automata = 0
+        sum_minimized_states = 0
+
         format_error_counts = {}
         root_task = root / task
 
@@ -178,6 +193,13 @@ def check_results(model_folder_name : str) :
                 #print(f"Ошибка формата в автомате номер {number}: " + parsed + '\n' + answer)
                 continue
 
+            extra_letters = parsed.alphabet - set(tasks_alphabets[task])
+            if extra_letters :
+                error = "unexpected alphabet symbol"
+                format_error_counts[error] = format_error_counts.get(error, 0) + 1
+                #print(f"Ошибка формата в автомате номер {number}: " + parsed + '\n' + answer)
+                continue
+
             if len(parsed.start_states) == 1 and all(len(set(targets)) <= 1 for st in parsed.states for targets in st.transitions.values()) :
                 dfa_counter += 1
                 sum_finish_states_dfa += len(parsed.finish_states)
@@ -189,7 +211,7 @@ def check_results(model_folder_name : str) :
                 sum_start_states_nfa += len(parsed.start_states)
                 sum_all_states_nfa += len(parsed.states)
 
-            nfa = NFA(parsed.start_states, parsed.alphabet, parsed.finish_states)
+            nfa = NFA(parsed.start_states, tasks_alphabets[task], parsed.finish_states)
             tests = tasks_tests[task]
             passed_count = 0
 
@@ -211,6 +233,18 @@ def check_results(model_folder_name : str) :
                 correct_automata += 1
 
             dfa = nfa_to_dfa(nfa)
+
+            minimized_dfa = minimize_dfa(dfa)
+            sum_minimized_states += minimized_dfa.total_states
+
+            if equivalent_dfa(minimized_dfa, ground_truth):
+                equivalent_automata += 1
+
+            output_path = (
+                    Path("minimized") / RUN_NAME /
+                    model_folder_name / task / path.name
+            )
+            save_dfa(minimized_dfa, output_path)
 
             sum_dfa_states_global += dfa.total_states
 
@@ -258,15 +292,19 @@ def check_results(model_folder_name : str) :
         print(f"Процент правдивых принятий(относительно всех принятий): {percent(true_accept_count, true_accept_count + false_accept_count)}")
         print(f"Процент правдивых отвержений(относительно всех отвержений): {percent(true_deny_count, true_deny_count + false_deny_count)}")
 
+        print(f"\n=== Минимизация и сравнение\n")
+        print(f"Процент корректных автоматов: {percent(equivalent_automata, total_count)}")
+        print(f"Среднее число состояний в минимизированном DFA: {average(sum_minimized_states, valid_count)}")
+
         print(f"\n=== Итог\n")
         print(f"Прошли все тесты: {correct_automata}")
         print(f"Среди всех ответов LLM: {percent(correct_automata, total_count)}")
 
 
-#check_results("openai__gpt-6-luna")
-#check_results("deepseek__deepseek-v4.1-flash")
-#check_results("xiaomi__mimo-v2.6-pro")
-#check_results("z-ai__glm-5.3")
+check_results("openai__gpt-6-luna")
+check_results("deepseek__deepseek-v4.1-flash")
+check_results("xiaomi__mimo-v2.6-pro")
+check_results("z-ai__glm-5.3")
 
 check_results("qwen__qwen3.5-flash-02-23")
 
