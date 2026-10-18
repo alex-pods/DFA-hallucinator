@@ -151,8 +151,22 @@ def nfa_to_dfa(nfa : NFA) -> DFA :
     return dfa
 
 def minimize_dfa(dfa : DFA) -> DFA :
-    not_finish_states = list(set(dfa.states) - set(dfa.finish_states))
-    finish_states = dfa.finish_states
+    reachable = {dfa.start_state}
+    waiting_states = deque([dfa.start_state])
+
+    while waiting_states:
+        cur_state = waiting_states.popleft()
+
+        for letter in dfa.alphabet:
+            next_state = cur_state.next(letter)
+
+            if next_state is not None and next_state not in reachable:
+                reachable.add(next_state)
+                waiting_states.append(next_state)
+    finish_set = set(dfa.finish_states)
+
+    not_finish_states = list(reachable - finish_set)
+    finish_states = list(reachable & finish_set)
     groups = []
     if not_finish_states:
         groups.append(not_finish_states)

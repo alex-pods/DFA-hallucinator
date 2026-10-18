@@ -75,5 +75,5 @@ def openrouter_request(model: str, task: str) -> tuple[str, float]:
 
     print("Завершение:", choice.finish_reason)
     print(f"Стоимость: ${cost:.6f}")
-    return str(choice.message.content) or "", cost
+    return choice.message.content or "", cost
 

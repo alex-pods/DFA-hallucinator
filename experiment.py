@@ -302,11 +302,11 @@ def check_results(model_folder_name : str) :
 
 
 check_results("openai__gpt-6-luna")
-#check_results("deepseek__deepseek-v4.1-flash")
-#check_results("xiaomi__mimo-v2.6-pro")
-#check_results("z-ai__glm-5.3")
+check_results("deepseek__deepseek-v4.1-flash")
+check_results("xiaomi__mimo-v2.6-pro")
+check_results("z-ai__glm-5.3")
 
-#check_results("qwen__qwen3.5-flash-02-23")
+check_results("qwen__qwen3.5-flash-02-23")
 
 # gpt 6 luna ~$0.018000 basic
 # gpt 6 luna ~$0.018000 4th-symbol
