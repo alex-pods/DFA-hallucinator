@@ -1,0 +1,333 @@
+from lab.automata.algorithms import equivalent_dfa, minimize_dfa, nfa_to_dfa
+from lab.experiments.answer_parser import parse_answer
+from lab.automata import NFA
+
+from lab.experiments.storage import answer_path, save_answer, save_dfa, automata_run_dir
+from lab.experiments.specs.ground_truth import *
+
+from lab.experiments.specs.tasks import tasks, tasks_alphabets, tasks_tests
+from lab.llm_requests import request_for
+from lab.experiments.specs.prompts import AUTOMATA_SYSTEM_REQUEST
+
+from lab.experiments.pipelines.repair import repair
+
+from .stats import already_saved, save_attempt, print_statistics
+
+from lab.experiments.pipelines.parallel_tests import parallel_tests
+from lab.experiments.storage import save_pipeline_artifacts
+
+
+RUN_NAME = "run_001"
+
+
+def parse_qwen_answer(answer: str) :
+    return answer.split("</think>")[-1].strip()
+
+def get_answers(
+    model: str,
+    iterations: int,
+    task_name: str,
+    source: str = "openrouter",
+    pipeline : str = "single",
+    draft_limit : int = -1,
+    repair_limit : int = -1,
+    test_limit: int = -1,
+) -> tuple[float, float]:
+    ask = request_for(source)
+    total_cost = 0.0
+    total_time = 0.0
+
+    run_name = RUN_NAME
+    if pipeline == "repair":
+        run_name = f"{RUN_NAME}__repair_d{draft_limit}_r{repair_limit}"
+
+    task = tasks[task_name]
+
+    task_folder = answer_path(
+        run_name, model, task_name, 0, source
+    ).parent
+
+    for i in range(iterations):
+        path = answer_path(run_name, model, task_name, i, source)
+
+        if already_saved(path, i):
+            print(f"{task_name}: ответ {i + 1} уже сохранён")
+            continue
+
+        print(f"\nЗапрос: {task_name}, ответ {i + 1}/{iterations}", flush=True)
+
+        info = {}
+
+        if pipeline == "repair":
+            answer, cost, elapsed = repair(
+                "automata", model, task_name, task,
+                draft_limit=draft_limit,
+                repair_limit=repair_limit,
+                metrics=info
+            )
+            draft = parse_qwen_answer(info["draft"])
+
+
+        elif pipeline == "parallel_tests":
+
+            if source != "local":
+                raise ValueError(
+
+                    "parallel_tests пока поддерживает только local."
+
+                )
+
+            answer, cost, elapsed = parallel_tests(
+                kind="automata",
+                model=model,
+                task_name=task_name,
+                task=task,
+                draft_limit=draft_limit,
+                test_limit=test_limit,
+                review_limit=repair_limit,
+                metrics=info,
+            )
+
+            draft = parse_qwen_answer(
+                info.get("draft", answer)
+            )
+
+        else:
+            answer, cost, elapsed = ask(model, task, AUTOMATA_SYSTEM_REQUEST)
+            draft = parse_qwen_answer(answer)
+
+        answer = parse_qwen_answer(answer)
+
+        if pipeline == "parallel_tests":
+            artifacts_path = save_pipeline_artifacts(
+                path,
+                info,
+            )
+
+            print(
+                "Данные pipeline сохранены в: "
+                f"{artifacts_path.resolve()}"
+            )
+
+        save_attempt(
+            path, i, "automata", task_name, draft, answer, elapsed, cost,
+            info.get("repair_attempted", False)
+        )
+
+        total_cost += cost
+        total_time += elapsed
+
+        print_statistics(task_folder)
+
+    print_statistics(task_folder)
+    print_statistics(task_folder.parent, recursive=True)
+
+    return total_cost, total_time
+
+# if __name__ == "__main__":
+#      total_cost = 0.0
+#      for task_name in tasks.keys() :
+#          total_cost += get_answers("qwen/qwen3.5-flash-02-23", 50, task_name)
+#      print(f"Всего потрачено: ${total_cost:.6f}")
+
+
+def check_results(
+    model_folder_name: str,
+    source: str = "openrouter",
+    *,
+    run_name: str | None = None
+):
+    if run_name is None:
+        run_name = RUN_NAME
+
+    root = automata_run_dir(run_name, source) / model_folder_name
+
+    for task in tasks.keys() :
+
+        ground_truth = minimize_dfa(ground_truth_builders[task]())
+
+        equivalent_automata = 0
+        sum_minimized_states = 0
+
+        format_error_counts = {}
+        root_task = root / task
+
+        dfa_counter = 0
+        nfa_counter = 0
+        sum_out_states = 0
+        sum_finish_states_dfa = 0
+        sum_finish_states_nfa = 0
+        sum_start_states_nfa = 0
+        sum_all_states_dfa = 0
+        sum_all_states_nfa = 0
+
+        false_accept_count = 0
+        false_deny_count = 0
+        true_accept_count = 0
+        true_deny_count = 0
+
+        sum_dfa_states_global = 0
+
+        correct_automata = 0
+
+        for path in sorted(root_task.rglob("*.txt")):
+            number = int(path.stem.rsplit("__", 1)[1])
+
+
+            answer = path.read_text(encoding="utf-8")
+            parsed = parse_answer(answer)
+
+            if isinstance(parsed, str) :
+                format_error_counts[parsed] = format_error_counts.get(parsed, 0) + 1
+                #print(f"Ошибка формата в автомате номер {number}: " + parsed + '\n' + answer)
+                continue
+
+            extra_letters = parsed.alphabet - set(tasks_alphabets[task])
+            if extra_letters :
+                error = "unexpected alphabet symbol"
+                format_error_counts[error] = format_error_counts.get(error, 0) + 1
+                #print(f"Ошибка формата в автомате номер {number}: " + parsed + '\n' + answer)
+                continue
+
+            if len(parsed.start_states) == 1 and all(len(set(targets)) <= 1 for st in parsed.states for targets in st.transitions.values()) :
+                dfa_counter += 1
+                sum_finish_states_dfa += len(parsed.finish_states)
+                sum_all_states_dfa += len(parsed.states)
+            else :
+                nfa_counter += 1
+                sum_out_states  += sum(sum(len(set(targets)) for targets in st.transitions.values()) for st in parsed.states) / len(parsed.states)
+                sum_finish_states_nfa += len(parsed.finish_states)
+                sum_start_states_nfa += len(parsed.start_states)
+                sum_all_states_nfa += len(parsed.states)
+
+            nfa = NFA(parsed.start_states, tasks_alphabets[task], parsed.finish_states)
+            tests = tasks_tests[task]
+            passed_count = 0
+
+            for word, exp in tests.items() :
+                res = nfa.compute(word)
+
+                if res == exp:
+                    passed_count += 1
+                if res == exp and exp == "accept" :
+                    true_accept_count += 1
+                if res == exp and exp == "deny" :
+                    true_deny_count += 1
+                if res != exp and exp == "accept" :
+                    false_deny_count += 1
+                if res != exp and exp == "deny" :
+                    false_accept_count += 1
+
+            if tests and passed_count == len(tests):
+                correct_automata += 1
+
+            dfa = nfa_to_dfa(nfa)
+
+            minimized_dfa = minimize_dfa(dfa)
+            sum_minimized_states += minimized_dfa.total_states
+
+            if equivalent_dfa(minimized_dfa, ground_truth):
+                equivalent_automata += 1
+
+            output_path = (
+                    automata_run_dir(run_name, source, minimized=True)
+                    / model_folder_name / task / path.name
+            )
+            save_dfa(minimized_dfa, output_path)
+
+            sum_dfa_states_global += dfa.total_states
+
+        def average(total, count):
+            return f"{total / count:.2f}" if count else "—"
+
+        def percent(part, total):
+            return f"{100 * part / total:.2f}%" if total else "—"
+
+        valid_count = dfa_counter + nfa_counter
+        format_error_count = sum(format_error_counts.values())
+        total_count = valid_count + format_error_count
+        print("======================================================")
+        print(f"Модель: {model_folder_name} Задача: {task}")
+        print("======================================================\n")
+
+        print(f"\n=== Ответы\nВсего ответов: {total_count}")
+        print(f"Корректный формат: {valid_count}")
+        print(f"Ошибки формата: {format_error_count}")
+        for error, count in sorted(format_error_counts.items()):
+            print(f"{error}: {count}")
+
+        print(f"\n=== Автоматы\n")
+        print(f"DFA: {dfa_counter}")
+        print(f"Процент DFA: {percent(dfa_counter, valid_count)}")
+        print(f"NFA: {nfa_counter}")
+        print(f"Процент NFA: {percent(nfa_counter, valid_count)}")
+
+        print(f"\n=== Средние характеристики автоматов\n")
+        print(f"Состояний в DFA: {average(sum_all_states_dfa, dfa_counter)}")
+        print(f"Принимающих состояний в DFA: {average(sum_finish_states_dfa, dfa_counter)}")
+
+        print(f"Состояний в NFA: {average(sum_all_states_nfa, nfa_counter)}")
+        print(f"Принимающих состояний в NFA: {average(sum_finish_states_nfa, nfa_counter)}")
+        print(f"Начальных состояний в NFA: {average(sum_start_states_nfa, nfa_counter)}")
+        print(f"Исходящих переходов в NFA: {average(sum_out_states, nfa_counter)}")
+
+        print(f"\n=== После детерменизации\n")
+        print(f"Состояний в DFA: {average(sum_dfa_states_global, valid_count)}")
+
+        tests_total = (true_accept_count + true_deny_count) + (false_accept_count + false_deny_count)
+
+        print(f"\n=== Результаты запуска автоматов\n")
+        print(f"Процент правдивых ответов: {percent(true_accept_count + true_deny_count, tests_total)}")
+        print(f"Процент правдивых принятий(относительно всех принятий): {percent(true_accept_count, true_accept_count + false_accept_count)}")
+        print(f"Процент правдивых отвержений(относительно всех отвержений): {percent(true_deny_count, true_deny_count + false_deny_count)}")
+
+        print(f"\n=== Минимизация и сравнение\n")
+        print(f"Процент корректных автоматов: {percent(equivalent_automata, total_count)}")
+        print(f"Среднее число состояний в минимизированном DFA: {average(sum_minimized_states, valid_count)}")
+
+        print(f"\n=== Итог\n")
+        print(f"Прошли все тесты: {correct_automata}")
+        print(f"Среди всех ответов LLM: {percent(correct_automata, total_count)}")
+
+
+#check_results("openai__gpt-6-luna")
+#check_results("deepseek__deepseek-v4.1-flash")
+#check_results("xiaomi__mimo-v2.6-pro")
+#check_results("z-ai__glm-5.3")
+
+#check_results("qwen__qwen3.5-flash-02-23")
+
+# gpt 6 luna ~$0.018000 basic
+# gpt 6 luna ~$0.018000 4th-symbol
+# gpt 6 luna ~$0.018000 employer
+# gpt 6 luna  $0.023756 intersection
+# gpt 6 luna  $0.008738 abc-bca-cab
+# gpt 6 luna  $0,089000 total
+
+# deepseek 4.1 flash $0.049613 basic
+# deepseek 4.1 flash $0.027777 4th-symbol
+# deepseek 4.1 flash $0.058395 employer
+# deepseek 4.1 flash $0.056259 intersection
+# deepseek 4.1 flash $0.035873 abc-bca-cab
+# deepseek 4.1 flash $0.178305 total
+
+# xiaomi mimo v2.6 pro $0.095734 basic
+# xiaomi mimo v2.6 pro $0.082924 4th-symbol
+# xiaomi mimo v2.6 pro $0.077908 employer
+# xiaomi mimo v2.6 pro $0.157236 intersection
+# xiaomi mimo v2.6 pro $0.057421 abc-bca-cab
+# xiaomi mimo v2.6 pro $0,471223 total
+
+# z-ai glm v5.3 $0.132319 basic
+# z-ai glm v5.3 $0.083759 4th-symbol
+# z-ai glm v5.3 $0.272199 employer
+# z-ai glm v5.3 $0.321347 intersection
+# z-ai glm v5.3 $0.082086 abc-bca-cab
+# z-ai glm v5.3 $0.891709 total 😥 в 10 раз дороже гпт
+
+# qwen qwen3.5 flash $0.113352 basic
+# qwen qwen3.5 flash $0.083348 4th-symbol
+# qwen qwen3.5 flash $0.106335 employer
+# qwen qwen3.5 flash $0.166875 intersection
+# qwen qwen3.5 flash $0.184193 abc-bca-cab
+# qwen qwen3.5 flash $0.654103 total

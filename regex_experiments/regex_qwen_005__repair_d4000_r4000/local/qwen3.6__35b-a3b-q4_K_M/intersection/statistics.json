@@ -1,0 +1,50 @@
+{
+    "version": 1,
+    "attempts": {
+        "0": {
+            "draft": "(111*0)|(11*01)|(1*01111*)",
+            "answer": "(111*0)|(11*01)|(1*01111*)",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 397.0227842000313,
+            "cost": 0.0
+        },
+        "1": {
+            "draft": "111*0|11*01|1*01111*",
+            "answer": "111*0|11*01|1*01111*",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 396.7818295999896,
+            "cost": 0.0
+        },
+        "2": {
+            "draft": "(111*0|11*01|1*0111*)",
+            "answer": "111*0|11*01|1*01111*",
+            "draft_correct": false,
+            "final_correct": true,
+            "repair_attempted": true,
+            "elapsed": 765.2990176000167,
+            "cost": 0.0
+        },
+        "3": {
+            "draft": "1*01*11|1*10|1*01",
+            "answer": "111*0|11*01|1*01111*",
+            "draft_correct": false,
+            "final_correct": true,
+            "repair_attempted": true,
+            "elapsed": 775.9610088001937,
+            "cost": 0.0
+        },
+        "4": {
+            "draft": "1*01111*",
+            "answer": "11*01|111*0|1*01111*",
+            "draft_correct": false,
+            "final_correct": true,
+            "repair_attempted": true,
+            "elapsed": 758.9406451999675,
+            "cost": 0.0
+        }
+    }
+}

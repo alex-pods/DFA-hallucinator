@@ -1,0 +1,50 @@
+{
+    "version": 1,
+    "attempts": {
+        "0": {
+            "draft": "(0|1)*1(0|1)(0|1)(0|1)",
+            "answer": "(0|1)*1(0|1)(0|1)(0|1)",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 204.32604890014045,
+            "cost": 0.0
+        },
+        "1": {
+            "draft": "(0|1)*1(0|1)(0|1)(0|1)",
+            "answer": "(0|1)*1(0|1)(0|1)(0|1)",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 211.52105009998195,
+            "cost": 0.0
+        },
+        "2": {
+            "draft": "(0|1)*1(0|1)(0|1)(0|1)",
+            "answer": "(0|1)*1(0|1)(0|1)(0|1)",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 231.33416770002805,
+            "cost": 0.0
+        },
+        "3": {
+            "draft": "(0|1)*1(0|1)(0|1)(0|1)",
+            "answer": "(0|1)*1(0|1)(0|1)(0|1)",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 241.3069748999551,
+            "cost": 0.0
+        },
+        "4": {
+            "draft": "(0|1)*1(0|1)(0|1)(0|1)",
+            "answer": "(0|1)*1(0|1)(0|1)(0|1)",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 203.0131170998793,
+            "cost": 0.0
+        }
+    }
+}

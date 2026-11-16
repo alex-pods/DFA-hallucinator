@@ -1,0 +1,50 @@
+{
+    "version": 1,
+    "attempts": {
+        "0": {
+            "draft": "0(10)(10)*(1001|0110)*(01|10)*|1(01)(01)*(0110|1001)*(10|01)*",
+            "answer": "0(10)(10)*(1001|0110)*(01|10)*|1(01)(01)*(0110|1001)*(10|01)*",
+            "draft_correct": false,
+            "final_correct": false,
+            "repair_attempted": true,
+            "elapsed": 901.5765820001252,
+            "cost": 0.0
+        },
+        "1": {
+            "draft": "(01)(0101)*0|(1010)*1",
+            "answer": "(01)(0101)*0|(1010)*1",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 387.9307423001155,
+            "cost": 0.0
+        },
+        "2": {
+            "draft": "(01)(01)*0|1(01)*",
+            "answer": "(1010)*1|(0101)*010",
+            "draft_correct": false,
+            "final_correct": true,
+            "repair_attempted": true,
+            "elapsed": 778.5201107000466,
+            "cost": 0.0
+        },
+        "3": {
+            "draft": "(1010)*1|01(0101)*0",
+            "answer": "(1010)*1|01(0101)*0",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 375.9360494001303,
+            "cost": 0.0
+        },
+        "4": {
+            "draft": "(01)*(01)0|((10)(10))*1",
+            "answer": "(01)*(01)0|((10)(10))*1",
+            "draft_correct": false,
+            "final_correct": false,
+            "repair_attempted": true,
+            "elapsed": 451.7665587000083,
+            "cost": 0.0
+        }
+    }
+}
