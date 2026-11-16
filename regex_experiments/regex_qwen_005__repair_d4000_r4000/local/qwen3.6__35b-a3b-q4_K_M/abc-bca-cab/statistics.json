@@ -1,0 +1,50 @@
+{
+    "version": 1,
+    "attempts": {
+        "0": {
+            "draft": "(abc|bca|cab)*",
+            "answer": "(abc|bca|cab)*",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 80.56666889996268,
+            "cost": 0.0
+        },
+        "1": {
+            "draft": "(abc|bca|cab)*",
+            "answer": "(abc|bca|cab)*",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 155.8517012000084,
+            "cost": 0.0
+        },
+        "2": {
+            "draft": "(abc|bca|cab)*",
+            "answer": "(abc|bca|cab)*",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 174.89000890008174,
+            "cost": 0.0
+        },
+        "3": {
+            "draft": "(abc|bca|cab)*",
+            "answer": "(abc|bca|cab)*",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 204.63220720016398,
+            "cost": 0.0
+        },
+        "4": {
+            "draft": "(abc|bca|cab)*",
+            "answer": "(abc|bca|cab)*",
+            "draft_correct": true,
+            "final_correct": true,
+            "repair_attempted": false,
+            "elapsed": 239.90400370000862,
+            "cost": 0.0
+        }
+    }
+}

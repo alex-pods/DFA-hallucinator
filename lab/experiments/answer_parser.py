@@ -1,5 +1,4 @@
-from automata import *
-from collections import deque
+from lab.automata import NFAState
 
 class ParsedAnswer:
     start_states = []
@@ -104,52 +103,5 @@ def parse_answer(answer : str) -> ParsedAnswer | str:
     ans = ParsedAnswer(start_states, states, alphabet, finish_states)
 
     return ans
-
-
-
-
-def nfa_to_dfa(nfa : NFA) -> DFA :
-
-    nfa_start_states = nfa.start_states
-    nfa_finish_states = nfa.finish_states
-    dfa_finish_states = []
-
-    dfa_start_state = State(0, {})
-
-    if any(st in nfa_finish_states for st in nfa_start_states):
-        dfa_finish_states.append(dfa_start_state)
-
-    states = {frozenset(nfa_start_states) : dfa_start_state}
-
-    alphabet = nfa.alphabet
-
-    waiting_states = deque()
-    waiting_states.append(nfa_start_states)
-
-    while len(waiting_states) > 0 :
-        cur_states = waiting_states.popleft()
-        for letter in alphabet :
-            next_states = set()
-
-            for st in cur_states :
-                next_states.update(st.next(letter))
-
-            if frozenset(next_states) in states :
-                states[frozenset(cur_states)].add_transition(letter, states[frozenset(next_states)])
-            else :
-                new_state = State(len(states),{})
-                if any((element in next_states) for element in nfa_finish_states) :
-                    dfa_finish_states.append(new_state)
-
-                states[frozenset(next_states)] = new_state
-                waiting_states.append(next_states)
-
-                states[frozenset(cur_states)].add_transition(letter, new_state)
-    dfa = DFA(dfa_start_state, alphabet, dfa_finish_states)
-    dfa.total_states = len(states)
-    return dfa
-
-
-
 
 

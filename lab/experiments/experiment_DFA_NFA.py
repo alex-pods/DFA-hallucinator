@@ -1,138 +1,128 @@
-from misc import *
-from openrouter_requester import *
-from fileIO import *
-from automata import *
+from lab.automata.algorithms import equivalent_dfa, minimize_dfa, nfa_to_dfa
+from lab.experiments.answer_parser import parse_answer
+from lab.automata import NFA
+
+from lab.experiments.storage import answer_path, save_answer, save_dfa, automata_run_dir
+from lab.experiments.specs.ground_truth import *
+
+from lab.experiments.specs.tasks import tasks, tasks_alphabets, tasks_tests
+from lab.llm_requests import request_for
+from lab.experiments.specs.prompts import AUTOMATA_SYSTEM_REQUEST
+
+from lab.experiments.pipelines.repair import repair
+
+from .stats import already_saved, save_attempt, print_statistics
+
+from lab.experiments.pipelines.parallel_tests import parallel_tests
+from lab.experiments.storage import save_pipeline_artifacts
 
 
 RUN_NAME = "run_001"
 
-tasks = {
-    "basic": """число ноликов чётно, число единиц нечётно, нет подстрок 00 и нет подстрок 11,
-                алфавит {0 , 1}""",
-
-    "4th-symbol": "четвёртый символ с конца равен 1, алфавит {0 , 1}",
-
-    "employer": """ID сотрудника: начинается с 3 букв региона,
-                потом 4 цифры, причем если регион SPB,
-                то цифры не могут начинаться с нуля,
-                алфавит для простоты возьмем такой: {A, M, C, S, P, B, 0, 1, 2, 3, 4, 5}""",
-
-    "intersection": r"""L = (A)^R \cap B,
-                    где A = \{w \in \{0,1\}^*, третий символ с начала равен 1\},
-                    B = \{w \in \{0,1\}^*, w содержит ровно один 0\}""",
-
-    "abc-bca-cab": "слово состоит только из конкатенированных циклических сдвигов abc {a, b, c}",
-}
-tasks_tests = {
-    "basic": {
-        "": "deny",
-        "0": "deny",
-        "1": "accept",
-        "01": "deny",
-        "10": "deny",
-        "010": "accept",
-        "101": "deny",
-        "001": "deny",
-        "111": "deny",
-        "10101": "accept",
-        "01010": "deny",
-        "11010": "deny",
-        "0101010": "accept",
-        "101010101": "accept",
-        "01010101010": "accept",
-    },
-
-    "4th-symbol": {
-        "": "deny",
-        "1": "deny",
-        "11": "deny",
-        "101": "deny",
-        "0000": "deny",
-        "1000": "accept",
-        "1010": "accept",
-        "1111": "accept",
-        "0111": "deny",
-        "01000": "accept",
-        "10000": "deny",
-        "001000": "accept",
-        "110111": "deny",
-        "1010101": "deny",
-        "0001000": "accept",
-    },
-
-    "employer": {
-        "": "deny",
-        "SPB1234": "accept",
-        "SPB5000": "accept",
-        "SPB0123": "deny",
-        "SPB0000": "deny",
-        "AMC0000": "accept",
-        "AAA0123": "accept",
-        "SPA0000": "accept",
-        "SBP0000": "accept",
-        "SPB123": "deny",
-        "SPB12345": "deny",
-        "SP1234": "deny",
-        "SPBA1234": "deny",
-        "1PB1234": "deny",
-        "SPB12A4": "deny",
-    },
-
-    "intersection": {
-        "": "deny",
-        "0": "deny",
-        "01": "deny",
-        "111": "deny",
-        "011": "deny",
-        "101": "accept",
-        "110": "accept",
-        "0111": "accept",
-        "1011": "deny",
-        "1101": "accept",
-        "1110": "accept",
-        "1100": "deny",
-        "11011": "deny",
-        "11101": "accept",
-        "011111": "accept",
-    },
-
-    "abc-bca-cab": {
-        "": "accept",
-        "abc": "accept",
-        "bca": "accept",
-        "cab": "accept",
-        "abcabc": "accept",
-        "abcbca": "accept",
-        "bcacab": "accept",
-        "cabbcaabc": "accept",
-        "a": "deny",
-        "ab": "deny",
-        "acb": "deny",
-        "abcab": "deny",
-        "abccba": "deny",
-        "ababcc": "deny",
-        "abcabcab": "deny",
-    },
-}
 
 def parse_qwen_answer(answer: str) :
     return answer.split("</think>")[-1].strip()
 
-def get_answers(model : str, iterations : int, task_name : str) -> float :
-    ttl_cost = 0.0
-    for i in range(0, iterations) :
-        path = answer_path(RUN_NAME, model, task_name, i)
-        if path.exists():
+def get_answers(
+    model: str,
+    iterations: int,
+    task_name: str,
+    source: str = "openrouter",
+    pipeline : str = "single",
+    draft_limit : int = -1,
+    repair_limit : int = -1,
+    test_limit: int = -1,
+) -> tuple[float, float]:
+    ask = request_for(source)
+    total_cost = 0.0
+    total_time = 0.0
+
+    run_name = RUN_NAME
+    if pipeline == "repair":
+        run_name = f"{RUN_NAME}__repair_d{draft_limit}_r{repair_limit}"
+
+    task = tasks[task_name]
+
+    task_folder = answer_path(
+        run_name, model, task_name, 0, source
+    ).parent
+
+    for i in range(iterations):
+        path = answer_path(run_name, model, task_name, i, source)
+
+        if already_saved(path, i):
+            print(f"{task_name}: ответ {i + 1} уже сохранён")
             continue
 
-        answer, cost = openrouter_request(model, tasks[task_name])
-        answer = parse_qwen_answer(answer)
-        ttl_cost += cost
+        print(f"\nЗапрос: {task_name}, ответ {i + 1}/{iterations}", flush=True)
 
-        save_answer(RUN_NAME, model, task_name, i, answer)
-        print(task_name + ": сохранён ответ "+str(i+1)+"/" + str(iterations))
-        print(f"Потрачено на задачу: ${ttl_cost:.6f}\n")
-    return ttl_cost
+        info = {}
+
+        if pipeline == "repair":
+            answer, cost, elapsed = repair(
+                "automata", model, task_name, task,
+                draft_limit=draft_limit,
+                repair_limit=repair_limit,
+                metrics=info
+            )
+            draft = parse_qwen_answer(info["draft"])
+
+
+        elif pipeline == "parallel_tests":
+
+            if source != "local":
+                raise ValueError(
+
+                    "parallel_tests пока поддерживает только local."
+
+                )
+
+            answer, cost, elapsed = parallel_tests(
+                kind="automata",
+                model=model,
+                task_name=task_name,
+                task=task,
+                draft_limit=draft_limit,
+                test_limit=test_limit,
+                review_limit=repair_limit,
+                metrics=info,
+            )
+
+            draft = parse_qwen_answer(
+                info.get("draft", answer)
+            )
+
+        else:
+            answer, cost, elapsed = ask(model, task, AUTOMATA_SYSTEM_REQUEST)
+            draft = parse_qwen_answer(answer)
+
+        answer = parse_qwen_answer(answer)
+
+        if pipeline == "parallel_tests":
+            artifacts_path = save_pipeline_artifacts(
+                path,
+                info,
+            )
+
+            print(
+                "Данные pipeline сохранены в: "
+                f"{artifacts_path.resolve()}"
+            )
+
+        save_attempt(
+            path, i, "automata", task_name, draft, answer, elapsed, cost,
+            info.get("repair_attempted", False)
+        )
+
+        total_cost += cost
+        total_time += elapsed
+
+        print_statistics(task_folder)
+
+    print_statistics(task_folder)
+    print_statistics(task_folder.parent, recursive=True)
+
+    return total_cost, total_time
 
 # if __name__ == "__main__":
 #      total_cost = 0.0
@@ -141,10 +131,24 @@ def get_answers(model : str, iterations : int, task_name : str) -> float :
 #      print(f"Всего потрачено: ${total_cost:.6f}")
 
 
-def check_results(model_folder_name : str) :
-    root = Path("experiments") / RUN_NAME / model_folder_name
+def check_results(
+    model_folder_name: str,
+    source: str = "openrouter",
+    *,
+    run_name: str | None = None
+):
+    if run_name is None:
+        run_name = RUN_NAME
+
+    root = automata_run_dir(run_name, source) / model_folder_name
 
     for task in tasks.keys() :
+
+        ground_truth = minimize_dfa(ground_truth_builders[task]())
+
+        equivalent_automata = 0
+        sum_minimized_states = 0
+
         format_error_counts = {}
         root_task = root / task
 
@@ -178,6 +182,13 @@ def check_results(model_folder_name : str) :
                 #print(f"Ошибка формата в автомате номер {number}: " + parsed + '\n' + answer)
                 continue
 
+            extra_letters = parsed.alphabet - set(tasks_alphabets[task])
+            if extra_letters :
+                error = "unexpected alphabet symbol"
+                format_error_counts[error] = format_error_counts.get(error, 0) + 1
+                #print(f"Ошибка формата в автомате номер {number}: " + parsed + '\n' + answer)
+                continue
+
             if len(parsed.start_states) == 1 and all(len(set(targets)) <= 1 for st in parsed.states for targets in st.transitions.values()) :
                 dfa_counter += 1
                 sum_finish_states_dfa += len(parsed.finish_states)
@@ -189,7 +200,7 @@ def check_results(model_folder_name : str) :
                 sum_start_states_nfa += len(parsed.start_states)
                 sum_all_states_nfa += len(parsed.states)
 
-            nfa = NFA(parsed.start_states, parsed.alphabet, parsed.finish_states)
+            nfa = NFA(parsed.start_states, tasks_alphabets[task], parsed.finish_states)
             tests = tasks_tests[task]
             passed_count = 0
 
@@ -211,6 +222,18 @@ def check_results(model_folder_name : str) :
                 correct_automata += 1
 
             dfa = nfa_to_dfa(nfa)
+
+            minimized_dfa = minimize_dfa(dfa)
+            sum_minimized_states += minimized_dfa.total_states
+
+            if equivalent_dfa(minimized_dfa, ground_truth):
+                equivalent_automata += 1
+
+            output_path = (
+                    automata_run_dir(run_name, source, minimized=True)
+                    / model_folder_name / task / path.name
+            )
+            save_dfa(minimized_dfa, output_path)
 
             sum_dfa_states_global += dfa.total_states
 
@@ -258,6 +281,10 @@ def check_results(model_folder_name : str) :
         print(f"Процент правдивых принятий(относительно всех принятий): {percent(true_accept_count, true_accept_count + false_accept_count)}")
         print(f"Процент правдивых отвержений(относительно всех отвержений): {percent(true_deny_count, true_deny_count + false_deny_count)}")
 
+        print(f"\n=== Минимизация и сравнение\n")
+        print(f"Процент корректных автоматов: {percent(equivalent_automata, total_count)}")
+        print(f"Среднее число состояний в минимизированном DFA: {average(sum_minimized_states, valid_count)}")
+
         print(f"\n=== Итог\n")
         print(f"Прошли все тесты: {correct_automata}")
         print(f"Среди всех ответов LLM: {percent(correct_automata, total_count)}")
@@ -268,7 +295,7 @@ def check_results(model_folder_name : str) :
 #check_results("xiaomi__mimo-v2.6-pro")
 #check_results("z-ai__glm-5.3")
 
-check_results("qwen__qwen3.5-flash-02-23")
+#check_results("qwen__qwen3.5-flash-02-23")
 
 # gpt 6 luna ~$0.018000 basic
 # gpt 6 luna ~$0.018000 4th-symbol

@@ -1,3 +1,5 @@
+from collections import deque
+
 class State:
     state_id = 0
     transitions = {}
@@ -23,6 +25,13 @@ class State:
 
 class NFAState(State):
 
+    def __init__(self, state_id: int, transitions: dict):
+        super().__init__(state_id, transitions)
+        self.epsilon_transitions = []
+
+    def add_epsilon_transition(self, out: "NFAState"):
+        self.epsilon_transitions.append(out)
+
     def next(self, letter: str) -> list["NFAState"]:
         assert len(letter) == 1
         if letter in self.transitions :
@@ -45,6 +54,7 @@ class DFA:
     start_state = None
     finish_states = []
     alphabet = []
+    states = []
     total_states = 0
 
     def __init__(self, start_state, alphabet, finish_states) :
@@ -73,14 +83,30 @@ class NFA:
         self.finish_states = finish_states
 
     def compute(self, word: str) -> str :
-        cur_states = self.start_states
+        cur_states = epsilon_closure(self.start_states)
 
         for letter in word :
             tmp_states = set()
+
             for st in cur_states :
                 tmp_states.update(st.next(letter))
-            cur_states = tmp_states
+
+            cur_states = epsilon_closure(tmp_states)
 
         if any((element in cur_states) for element in self.finish_states) :
             return "accept"
         return "deny"
+
+def epsilon_closure(states) :
+    reachable = set(states)
+    waiting_states = deque(reachable)
+
+    while waiting_states :
+        cur_state = waiting_states.popleft()
+
+        for next_state in cur_state.epsilon_transitions :
+            if next_state not in reachable :
+                reachable.add(next_state)
+                waiting_states.append(next_state)
+
+    return reachable

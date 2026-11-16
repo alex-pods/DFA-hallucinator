@@ -1,0 +1,50 @@
+{
+    "version": 1,
+    "attempts": {
+        "0": {
+            "draft": "(A|M|C|S|P|B)(A|M|C|S|P|B)(A|M|C|S|P|B)0(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)|(SPB(1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5))",
+            "answer": "(SPB(1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5))|((A|M|C|P|B)(A|M|C|S|P|B)(A|M|C|S|P|B)|(S(A|M|C|P|B)(A|M|C|S|P|B))|(SP(A|M|C|S|P)))(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)",
+            "draft_correct": false,
+            "final_correct": false,
+            "repair_attempted": true,
+            "elapsed": 1041.2111636002082,
+            "cost": 0.0
+        },
+        "1": {
+            "draft": "(A|M|C|P|B)[AMCSPB]{2}[012345]{4}|S[ACMSB][AMCSPB]{2}[012345]{4}|SP[AMCSP][012345]{4}|SPB[12345][012345]{3}",
+            "answer": "[AMCPB][AMCSPB][AMCSPB][012345][012345][012345][012345]|S[AMCB][AMCSPB][012345][012345][012345][012345]|SP[AMCSP][012345][012345][012345][012345]|SPB[12345][012345][012345][012345]",
+            "draft_correct": false,
+            "final_correct": false,
+            "repair_attempted": true,
+            "elapsed": 852.302087899996,
+            "cost": 0.0
+        },
+        "2": {
+            "draft": "SPB[1-5][012345][012345][012345]|(AMCSPB)(AMCSPB)(AMCSPB)([012345])([012345])([012345])([012345])",
+            "answer": "SPB(1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)|(A|M|C|S|P|B)(A|M|C|S|P|B)(A|M|C|S|P|B)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)",
+            "draft_correct": false,
+            "final_correct": false,
+            "repair_attempted": true,
+            "elapsed": 1063.6797808001284,
+            "cost": 0.0
+        },
+        "3": {
+            "draft": "(SPBSB[12345][012345]{3})|([AMPBC][AMCSBP][AMCSBP]|S[MPBC][AMCSBP]|SP[AMPBC][AMCSBP])[012345]{4}",
+            "answer": "(SPB[12345][012345][012345][012345])|([AMPBC][AMCSBP][AMCSBP]|S[AMCSB][AMCSBP]|SP[AMCSP][AMCSBP])[012345][012345][012345][012345]",
+            "draft_correct": false,
+            "final_correct": false,
+            "repair_attempted": true,
+            "elapsed": 1059.0434367000125,
+            "cost": 0.0
+        },
+        "4": {
+            "draft": "(SPB(1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5))|((A|M|C|S|P|B)(A|M|C|S|P|B)(A|M|C|S|P|B))(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)",
+            "answer": "(SPB(1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5))|(((A|M|C|P|B)(A|M|C|S|P|B)(A|M|C|S|P|B))|(S(A|M|C|P|B)(A|M|C|S|P|B))|(SP(A|M|C|S|P)))(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)(0|1|2|3|4|5)",
+            "draft_correct": false,
+            "final_correct": false,
+            "repair_attempted": true,
+            "elapsed": 1119.2875018001068,
+            "cost": 0.0
+        }
+    }
+}
